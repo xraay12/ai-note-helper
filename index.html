@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AI Note Helper V1 by DennXCode</title>
+<style>
+/* ------ CSS ORIGINALMU (tidak diubah) ------ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&display=swap');
+:root{
+  --bg:#04040a; --neon1:#60a5fa; --neon2:#4fd1c5; --muted:#8fa8bf;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; font-family:"Inter",system-ui,Arial;
+  background: radial-gradient(800px 400px at 10% 10%, rgba(12,16,40,0.55), transparent),
+              radial-gradient(700px 350px at 90% 90%, rgba(36,8,40,0.45), transparent),
+              linear-gradient(180deg,var(--bg), #070720);
+  color:#e6f6ff; display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.wrap{
+  width:95%; max-width:1040px; min-height:680px; border-radius:14px; overflow:hidden; position:relative;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.7);
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+}
+canvas#bgCanvas{ position:absolute; inset:0; z-index:0; }
+
+/* opening */
+.opening{
+position:absolute; inset:0; z-index:6; display:flex; flex-direction:column; gap:12px;
+align-items:center; justify-content:center; text-align:center; padding:28px;
+backdrop-filter: blur(6px);
+background: linear-gradient(180deg, rgba(3,8,23,0.88), rgba(6,10,28,0.86));
+transition: opacity 0.4s, transform 0.4s; /* Tambahan transisi */
+}
+.badge{ width:72px; height:72px; border-radius:16px; display:flex; align-items:center; justify-content:center;
+background: linear-gradient(135deg,var(--neon1),var(--neon2)); font-weight:800; font-size:26px; color:#011824;
+box-shadow: 0 12px 40px rgba(80,140,255,0.12);
+}
+.heading{ font-size:34px; font-weight:800; background: linear-gradient(90deg,var(--neon1),var(--neon2)); -webkit-background-clip:text; color:transparent; }
+.sub{ color: rgba(230,250,255,0.9); max-width:720px; line-height:1.45; font-weight:500; margin-top:6px; }
+
+.openBtn{ margin-top:18px; padding:12px 34px; border-radius:999px; border:none; cursor:pointer;
+background: linear-gradient(90deg,var(--neon2), var(--neon1)); color:#01232a; font-weight:800; box-shadow: 0 12px 40px rgba(60,150,255,0.12);
+}
+.openBtn:hover{ transform: translateY(-6px) scale(1.02); filter:brightness(1.04); }
+
+/* main */
+.main{ display:flex; gap:22px; padding:26px; align-items:flex-start; height:100%; opacity:0; transform:translateY(10px); transition:opacity .6s, transform .6s; z-index:2; position:relative; }
+.left{ flex:1; min-width:320px; }
+.right{ width:360px; min-width:260px; border-left:1px solid rgba(255,255,255,0.03); padding-left:18px; }
+h2{ margin:0; color:var(--neon1); font-size:20px; font-weight:700; }
+.muted{ color:var(--muted); margin-top:6px; font-size:14px; }
+textarea{ width:100%; min-height:220px; margin-top:16px; padding:14px; border-radius:12px; border:none;
+background: rgba(255,255,255,0.02); color:#eaf8ff; font-size:15px; outline:none; resize:vertical; box-shadow: inset 0 6px 18px rgba(0,0,0,0.45); }
+.controls{ display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; align-items:center; }
+.btn{ padding:10px 14px; border-radius:12px; cursor:pointer; border:1px solid rgba(255,255,255,0.04);
+background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); color:var(--neon2); font-weight:700; }
+.btn.primary{ background: linear-gradient(90deg, rgba(96,165,250,0.08), rgba(94,234,212,0.06)); color:#eaf6ff; border:1px solid rgba(94,234,212,0.06) }
+.btn.warn{ color:#ffdede; border:1px solid rgba(255,75,75,0.06) }
+.controls .status { margin-left:auto; color:var(--muted); font-weight:700; display:flex; gap:10px; align-items:center; font-size:13px; }
+
+.card{ background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:12px; border-radius:10px; box-shadow: 0 12px 30px rgba(0,0,0,0.5) }
+
+.meta{ font-size:13px; color:var(--muted); font-weight:700; margin-bottom:8px; }
+.summary{ margin-top:12px; min-height:120px; max-height:340px; overflow:auto; padding:12px; border-radius:8px; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); color:#cfeff6; border:1px solid rgba(255,255,255,0.02); }
+
+.keyword { background: linear-gradient(90deg,#4fd1c550,#60a5fa50); padding:2px 4px; border-radius:4px; font-weight:600; }
+
+footer{ position:absolute; bottom:12px; left:0; right:0; text-align:center; color:rgba(230,240,255,0.12); font-weight:700; letter-spacing:0.6px; font-size:13px; }
+
+@media (max-width:880px){
+  .main{ flex-direction:column; padding:18px; gap:16px }
+  .right{ width:100%; border-left:none; padding-left:0 }
+}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+<canvas id="bgCanvas"></canvas>
+
+<div class="opening" id="opening">
+  <div class="badge">Ai</div>
+  <div class="heading">AI Note Helper V1</div>
+  <div class="sub">Peringkas berbasis AI. Tepat, cepat, akurat. 100% aman dan terpercaya.</div>
+  <button class="openBtn" id="openBtn">Mulai Sekarang →</button>
+</div>
+
+<div class="main" id="main" style="display:none;">
+  <div class="left">
+    <h2>AI Note Helper</h2>
+    <div class="muted">Tulis catatan Anda, lalu ringkas teks dengan algoritma pintar berbasis browser.</div>
+
+    <textarea id="note" placeholder="Teks akan muncul di sini..."></textarea>
+
+    <div class="controls">
+      <button class="btn primary" id="btnSumm">📝 Ringkas Otomatis</button>
+      <button class="btn" id="btnClear">🧹 Bersihkan</button>
+
+      </div>
+  </div>
+
+  <div class="right">
+    <div class="card">
+      
+      <div class="meta">Ringkasan</div>
+      <div class="summary" id="summaryBox">
+        Tekan <strong>Ringkas Otomatis</strong> untuk melihat ringkasan pintar.
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>Developed by DennXCode with AI</footer>
+
+</div>
+
+<script>
+/* ======================================================
+    UTIL
+====================================================== */
+function escapeHtml(unsafe) {
+  if(!unsafe) return '';
+  return unsafe.replace(/&/g,"&amp;")
+               .replace(/</g,"&lt;")
+               .replace(/>/g,"&gt;")
+               .replace(/"/g,"&quot;")
+               .replace(/'/g,"&#039;"); 
+}
+
+// Fungsi untuk membuat elemen HTML yang aman
+function createSafeDiv(htmlContent) {
+    const div = document.createElement('div');
+    div.innerHTML = htmlContent;
+    return div.innerHTML;
+}
+
+/* ======================================================
+    BACKGROUND PARTICLES (ORIGINAL)
+====================================================== */
+(function particles(){
+  const canvas = document.getElementById('bgCanvas');
+  const ctx = canvas.getContext('2d');
+  const DPR = devicePixelRatio||1;
+  let w,h,particlesArr;
+
+  function resize(){ w=canvas.width=canvas.clientWidth*DPR; h=canvas.height=canvas.clientHeight*DPR; makeParticles(); }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function makeParticles(){
+    particlesArr = [];
+    const count = Math.max(40, Math.floor((w*h)/120000));
+    for(let i=0;i<count;i++){
+      particlesArr.push({
+        x:Math.random()*w, y:Math.random()*h,
+        r:0.6+Math.random()*2.8,
+        vx:(Math.random()-0.5)*0.25, vy:(Math.random()-0.5)*0.25,
+        hue:200+Math.random()*120,
+        life:Math.random()*200+100
+      });
+    }
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle='rgba(6,10,28,0.25)';
+    ctx.fillRect(0,0,w,h);
+
+    for(const p of particlesArr){
+      p.x+=p.vx; p.y+=p.vy; p.life-=0.15;
+      if(p.x<-30)p.x=w+30; if(p.x>w+30)p.x=-30;
+      if(p.y<-30)p.y=h+30; if(p.y>h+30)p.y=-30;
+      if(p.life<0){ p.x=Math.random()*w; p.y=Math.random()*h; p.life=Math.random()*200+100; p.r=0.6+Math.random()*2.8; }
+
+      const grd=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*8);
+      grd.addColorStop(0,`hsla(${p.hue},90%,60%,0.12)`);
+      grd.addColorStop(1,`rgba(255,255,255,0)`);
+      ctx.fillStyle=grd;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r*8,0,Math.PI*2); ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ======================================================
+    OPENING → MAIN (Meningkatkan Transisi)
+====================================================== */
+const opening = document.getElementById('opening');
+const main = document.getElementById('main');
+const openBtn = document.getElementById('openBtn');
+
+openBtn.onclick = () => {
+    opening.style.opacity = '0';
+    opening.style.transform = 'translateY(-120px) scale(0.98)';
+    setTimeout(() => {
+        opening.style.display = 'none';
+        main.style.display = 'flex';
+        // Animasi fade-in untuk Main
+        setTimeout(() => {
+            main.style.opacity = '1';
+            main.style.transform = 'translateY(0)';
+        }, 50); 
+    }, 450);
+};
+
+/* ======================================================
+    SOUND FX (Dikosongkan untuk kesederhanaan)
+====================================================== */
+function playClick(){} 
+
+/* ======================================================
+    RINGKASAN RULE-BASED + KEYWORD HIGHLIGHT
+====================================================== */
+const noteArea = document.getElementById("note");
+
+function summarize(){
+  const text = noteArea.value.trim();
+  const box = document.getElementById("summaryBox");
+
+  if(!text){
+    box.innerHTML = "<div style='color:#ffbaba'>Tidak ada teks untuk diringkas.</div>";
+    return;
+  }
+
+  box.innerHTML="🔄 Meringkas...";
+
+  setTimeout(()=>{
+    // Pisahkan teks menjadi kalimat (regex yang lebih baik)
+    const sentences = text.match(/[^.!?]+[.!?]|\n/g) || []; 
+    // Bersihkan kalimat dari spasi berlebih
+    const cleanSentences = sentences.map(s => s.trim()).filter(s => s.length > 5);
+
+    const words = text.toLowerCase().match(/\b\w+\b/g) || [];
+    const freq={};
+    words.forEach(w=>{
+      // Abaikan kata hubung atau kata umum pendek
+      if(w.length<=3 || ['yang','dan','atau','ini','itu','ada','saya'].includes(w)) return; 
+      freq[w]=(freq[w]||0)+1;
+    });
+
+    // Ambil 5 kata paling sering
+    const topWords = Object.entries(freq)
+      .sort((a,b)=>b[1]-a[1])
+      .slice(0,5)
+      .map(x=>x[0]);
+
+    // Ambil 3 kalimat teratas yang mengandung kata kunci (Skor Kalimat Sederhana)
+    const scoredSentences = cleanSentences.map(s => {
+        let score = 0;
+        topWords.forEach(w => {
+            if (s.toLowerCase().includes(w)) {
+                score += 1;
+            }
+        });
+        return { sentence: s, score: score };
+    });
+    
+    const keySentences = scoredSentences
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3)
+        .map(item => item.sentence);
+
+
+    // Menghindari XSS dengan memastikan konten aman sebelum highlight
+    let highlightedText = escapeHtml(text);
+    
+    // Gantikan kata kunci dengan tag highlight
+    topWords.forEach(w=>{
+      // Gunakan RegExp untuk penggantian kata secara utuh (\b word boundary)
+      const re = new RegExp("\\b"+w+"\\b","gi"); 
+      highlightedText = highlightedText.replace(re, `<span class="keyword">${w}</span>`);
+    });
+
+    const summaryHTML = `
+      <strong>Ringkasan Otomatis</strong><br><br>
+      <strong>Kata penting:</strong> ${topWords.length > 0 ? topWords.map(w=>`<span class="keyword">${w}</span>`).join(", ") : "Tidak ditemukan."}<br><br>
+      <strong>Poin Utama:</strong><br>
+      ${keySentences.length > 0 ? keySentences.map(s=>`• ${escapeHtml(s)}`).join("<br>") : "Tidak ditemukan kalimat kunci."}
+      <br><br>
+      <hr style="border:none; border-top:1px solid rgba(255,255,255,0.05); margin: 12px 0;">
+      <strong>Teks dengan highlight:</strong><br>
+      <div style="margin-top:8px; line-height:1.6">${createSafeDiv(highlightedText.replace(/\n/g, '<br>'))}</div>
+    `;
+
+    box.innerHTML = summaryHTML;
+  },500);
+}
+document.getElementById("btnSumm").onclick = summarize;
+
+/* ======================================================
+    CLEAR
+====================================================== */
+document.getElementById("btnClear").onclick = ()=>{
+  noteArea.value="";
+  document.getElementById("summaryBox").innerHTML="Tekan <strong>Ringkas Otomatis</strong> untuk melihat hasil.";
+};
+
+// KODE UNTUK AUDIO DAN VISUALIZER DIHAPUS SEPENUHNYA
+// Hanya menyisakan fungsi util, partikel latar belakang, transisi, dan fungsi summarize/clear.
+
+</script>
+
+</body>
+</html>
